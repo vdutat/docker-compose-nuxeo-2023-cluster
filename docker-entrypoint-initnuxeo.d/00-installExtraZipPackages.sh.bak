@@ -1,0 +1,42 @@
+#set -x
+cat <<EOF
+ ######  #    #   #####  #####     ##
+ #        #  #      #    #    #   #  #
+ #####     ##       #    #    #  #    #
+ #         ##       #    #####   ######
+ #        #  #      #    #   #   #    #
+ ######  #    #     #    #    #  #    #
+
+
+ #####     ##     ####   #    #    ##     ####   ######   ####
+ #    #   #  #   #    #  #   #    #  #   #    #  #       #
+ #    #  #    #  #       ####    #    #  #       #####    ####
+ #####   ######  #       #  #    ######  #  ###  #            #
+ #       #    #  #    #  #   #   #    #  #    #  #       #    #
+ #       #    #   ####   #    #  #    #   ####   ######   ####
+EOF
+
+EXTRA_PACKAGES_DIR=/opt/nuxeo/server/extra-packages
+if [ -d $EXTRA_PACKAGES_DIR ]
+then
+    ls -al $EXTRA_PACKAGES_DIR
+    declare -a pkgs=()
+    for package in $(find $EXTRA_PACKAGES_DIR -name *.zip)
+    do
+        echo "* Adding extra Nuxeo package $package"
+        nuxeoctl mp-add --accept yes -im $package || echo "$package added."
+		echo "nuxeoctl: $?"
+		pkgs+=($package)
+    done
+    echo "* Added packages:"
+    for i in "${pkgs[@]}"
+    do
+	    echo "* - $i"
+    done
+    nuxeoctl mp-list
+    if [ -f $EXTRA_PACKAGES_DIR/extraPackages.txt ]
+    then
+        grep '^[[:blank:]]*[^[:blank:]#;]' $EXTRA_PACKAGES_DIR/extraPackages.txt |xargs -t -L1 -I PKG sh -c '{ nuxeoctl mp-install --accept true PKG; echo "Package PKG installed."; }'
+        nuxeoctl mp-list
+    fi
+fi

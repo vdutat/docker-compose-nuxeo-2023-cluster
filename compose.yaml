@@ -1,0 +1,132 @@
+x-nuxeo: &base-nuxeo
+  image: docker-private.packages.nuxeo.com/nuxeo/nuxeo:${NUXEO_VERSION_2023:-2023.39}
+  deploy:
+    resources: 
+      limits: 
+#        cpus: "0.50"  # Use at most 50% of one CPU core
+        memory: 3GB  # Use at most 8 GB of RAM
+  env_file: .env
+  depends_on:
+    - opensearch
+    - mongodb
+    - kafka
+  volumes:
+    - ./docker-entrypoint-initnuxeo.d:/docker-entrypoint-initnuxeo.d
+    - ./extra-packages:/opt/nuxeo/server/extra-packages
+    - vol-packages:/opt/nuxeo/server/packages/store:rw
+    - ./templates:/opt/nuxeo/server/custom-templates
+    - ./csv-import:/opt/nuxeo/server/csv-import
+    - vol-nuxeo-lib:/var/lib/nuxeo
+    - vol-nuxeo-log:/var/log/nuxeo
+    - vol-nuxeo-tmp:/tmp
+    - ./nuxeo-config/base.conf:/etc/nuxeo/conf.d/95-base.conf:ro
+    - ./nuxeo-config/kafka.conf:/etc/nuxeo/conf.d/97-kafka.conf:ro
+  environment:
+    - TZ=US/Pacific
+    - NUXEO_DEV=true
+    - NUXEO_ENVIRONMENT=dev
+    - NUXEO_INSTALL_HOTFIX=false
+    - NUXEO_PACKAGES=nuxeo-csv nuxeo-jsf-ui nuxeo-web-ui
+
+volumes:
+# sudo chown -R  900:1000 /var/lib/docker/volumes/vol-packages-store-2023/_data
+  vol-packages:
+    external: true
+    name: vol-packages-store-2023
+# sudo ls -al /var/snap/docker/common/var-lib-docker/volumes/docker-compose-nuxeo-2023-cluster_vol-nuxeo-binaries/_data
+  vol-nuxeo-binaries:
+  vol-nuxeo-lib1:
+  vol-nuxeo-log1:
+  vol-nuxeo-tmp1:
+  vol-nuxeo-lib2:
+  vol-nuxeo-log2:
+  vol-nuxeo-tmp2:
+  vol-mongodb:
+  vol-mongodb-configdb:
+  vol-opensearch:
+  vol-kafka-data:
+  vol-fakesmtp:
+    external: true
+    name: vol-fakesmtp
+  vol-apache-logs:
+
+services:
+  fakesmtp:
+    extends:
+      file: ../extends/fakesmtp.yaml
+      service: common-fakesmtp
+
+  web:
+    build: apache
+    image: apache-2-nuxeo-nodes:1
+    ports:
+      - "8080:80"
+    links:
+      - kafka
+      - nuxeo1
+      - nuxeo2
+    volumes:
+      - ./deploy:/deploy:ro
+      - vol-apache-logs:/logs:rw
+    environment:
+      - TZ=US/Pacific
+
+  kafka:
+    extends:
+      file: ../extends/kafka-2023.yaml
+      service: common-kafka
+
+  opensearch:
+    extends:
+      file: ../extends/elasticsearch-2023.yaml
+      service: common-opensearch
+
+#TODO
+#  opensearch-dashboards:
+#    extends:
+#      file: ../extends/elasticsearch-2023.yaml
+#      service: common-opensearch-dashboards
+
+#  elasticsearch:
+#    extends:
+#      file: ../extends/elasticsearch-2023.yaml
+#      service: common-elasticsearch
+
+# docker run -it --net docker-compose-nuxeo-2023-cluster_default --link docker-compose-nuxeo-2023-cluster_1:mongo --rm mongo:4.0 sh -c 'exec mongo "mongo:27017/nuxeo"'
+  mongodb:
+    extends:
+      file: ../extends/mongodb-2023.yaml
+      service: common-mongodb7
+
+  nuxeo1:
+    <<: *base-nuxeo
+    volumes:
+      - ./docker-entrypoint-initnuxeo.d:/docker-entrypoint-initnuxeo.d
+      - ./extra-packages:/opt/nuxeo/server/extra-packages
+      - vol-packages:/opt/nuxeo/server/packages/store:rw
+      - ./templates:/opt/nuxeo/server/custom-templates:ro
+      - ./csv-import:/opt/nuxeo/server/csv-import
+      - vol-nuxeo-lib1:/var/lib/nuxeo
+      - vol-nuxeo-binaries:/var/lib/nuxeo-shared:rw
+      - vol-nuxeo-log1:/var/log/nuxeo
+      - vol-nuxeo-tmp1:/tmp
+      - ./nuxeo-config/supnxp.conf:/etc/nuxeo/conf.d/95-supnxp.conf:ro
+      - ./nuxeo-config/kafka.conf:/etc/nuxeo/conf.d/97-kafka.conf:ro
+      - ./nuxeo-config/nuxeo1.conf:/etc/nuxeo/conf.d/98-nuxeo-cluster.conf:ro
+      
+  nuxeo2:
+    <<: *base-nuxeo
+    volumes:
+      - ./docker-entrypoint-initnuxeo.d:/docker-entrypoint-initnuxeo.d
+      - ./extra-packages:/opt/nuxeo/server/extra-packages
+      - vol-packages:/opt/nuxeo/server/packages/store:rw
+      - ./templates:/opt/nuxeo/server/custom-templates:ro
+      - ./csv-import:/opt/nuxeo/server/csv-import
+      - vol-nuxeo-lib2:/var/lib/nuxeo
+      - vol-nuxeo-binaries:/var/lib/nuxeo-shared:rw
+      - vol-nuxeo-log2:/var/log/nuxeo
+      - vol-nuxeo-tmp2:/tmp
+      - ./nuxeo-config/supnxp.conf:/etc/nuxeo/conf.d/95-supnxp.conf:ro
+      - ./nuxeo-config/kafka.conf:/etc/nuxeo/conf.d/97-kafka.conf:ro
+      - ./nuxeo-config/nuxeo2.conf:/etc/nuxeo/conf.d/98-nuxeo-cluster.conf:ro
+

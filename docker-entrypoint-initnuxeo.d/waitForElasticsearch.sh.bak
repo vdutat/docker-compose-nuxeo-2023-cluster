@@ -1,0 +1,8 @@
+ES_STATUS=red
+while [ "$ES_STATUS" != "green" ] 
+do
+    echo -n "Waiting for elasticsearch... "
+    ES_STATUS=$(curl -s elasticsearch:9200/_cat/health |cut -f 4 -d' ')
+    echo "$ES_STATUS"
+    sleep 1
+done
