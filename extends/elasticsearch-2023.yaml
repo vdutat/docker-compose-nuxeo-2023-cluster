@@ -1,0 +1,64 @@
+#sudo sysctl -w vm.max_map_count=262144
+# OR
+#grep vm.max_map_count /etc/sysctl.conf
+#vm.max_map_count=262144
+services:
+  common-opensearch:
+    image: opensearchproject/opensearch:1
+    ports:
+      - "9200:9200"
+      - 9600:9600 # Performance Analyzer
+    volumes:
+      - vol-opensearch:/usr/share/opensearch/data
+    environment:
+     #- cluster.initial_master_nodes=master-node-a
+      - discovery.type=single-node
+      - cluster.name=nuxeoCluster
+      # Both variables below work
+      #- DISABLE_SECURITY_PLUGIN=true
+      - plugins.security.disabled=true
+      - TZ=US/Pacific
+      # TODO test
+      #  "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      #- "DISABLE_INSTALL_DEMO_CONFIG=true"
+    deploy:
+      resources: 
+        limits: 
+          #cpus: "0.50"  # Use at most 50% of one CPU core
+          memory: 2GB  # Use at most 2 GB of RAM
+
+#TODO
+#  common-opensearch-dashboards:
+#    image: opensearchproject/opensearch-dashboards:1.2.0
+#    depends_on:
+#      - opensearch
+#    ports:
+#      - 5601:5601
+##    expose:
+##      - "5601"
+#    environment:
+#      - 'OPENSEARCH_HOSTS=["http://opensearch:9200"]'
+#      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true"
+
+  common-elasticsearch:
+    image: elasticsearch:8.7.0
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - vol-elasticsearch:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - cluster.name=nuxeoCluster
+      - TZ=US/Pacific
+      - ELASTIC_CLIENT_APIVERSIONING=true # compatibility mode
+      - logger.org.elasticsearch.discovery=WARN
+#      - "cluster.routing.allocation.disk.threshold_enabled=false"
+#      - "ES_JAVA_OPTS=-Xms384m -Xmx384m"
+    deploy:
+      resources: 
+        limits: 
+#          cpus: "0.50"  # Use at most 50% of one CPU core
+          memory: 2GB  # Use at most 2 GB of RAM
+

@@ -1,0 +1,8 @@
+services:
+  common-fakesmtp:
+    image: ghusta/fakesmtp:latest
+    volumes:
+      - vol-fakesmtp:/var/mail
+    environment:
+      - TZ=US/Pacific
+
